@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+backend/generated_images/
+generated_images/
+.env
+.env.local
+node_modules/
+.next/
+*.db
+*.sqlite
+.DS_Store
