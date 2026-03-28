@@ -11,20 +11,18 @@ interface AddItemModalProps {
 
 const COLOR_MODE_OPTIONS = ["random", "warm", "cool", "festive"];
 
-const defaultForm: CreateStereogramPayload = {
-  background_pattern: "",
-  hidden_object: "",
-  hidden_object_type: "image",
-  theme: "",
-  scheduled_date: new Date().toISOString().slice(0, 10),
-  depth_intensity: 0.35,
-  color_mode: "random",
-  dot_density: 5,
-};
-
 export function AddItemModal({ onClose }: AddItemModalProps) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<CreateStereogramPayload>(defaultForm);
+  const [form, setForm] = useState<CreateStereogramPayload>({
+    background_pattern: "",
+    hidden_object: "",
+    hidden_object_type: "image",
+    theme: "",
+    scheduled_date: new Date().toISOString().slice(0, 10),
+    depth_intensity: 0.35,
+    color_mode: "random",
+    dot_density: 5,
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

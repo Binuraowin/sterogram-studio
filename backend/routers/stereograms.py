@@ -249,6 +249,24 @@ def regenerate(
     return item
 
 
+# ── Caption ───────────────────────────────────────────────────────────────────
+
+@router.post("/{stereogram_id}/caption")
+def generate_caption(stereogram_id: int, db: Session = Depends(get_db)):
+    item = db.query(Stereogram).filter(Stereogram.id == stereogram_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Stereogram not found")
+
+    from services.caption_generator import generate_captions
+    try:
+        captions = generate_captions(item.hidden_object, item.background_pattern)
+        return captions
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Caption generation failed: {e}")
+
+
 # ── Download ──────────────────────────────────────────────────────────────────
 
 @router.get("/{stereogram_id}/download")
