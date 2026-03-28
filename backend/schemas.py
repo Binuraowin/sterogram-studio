@@ -42,6 +42,7 @@ class StereogramResponse(StereogramBase):
     status: str
     image_filename: Optional[str] = None
     image_url: Optional[str] = None
+    depth_map_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

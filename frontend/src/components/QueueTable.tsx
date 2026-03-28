@@ -7,6 +7,7 @@ import { Stereogram } from "@/lib/types";
 import { QueueRow } from "./QueueRow";
 import { StatsCards } from "./StatsCards";
 import { AddItemModal } from "./AddItemModal";
+import { GeneratePostModal } from "./GeneratePostModal";
 
 interface QueueTableProps {
   selectedId: number | null;
@@ -18,28 +19,35 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
   const [dateFilter, setDateFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
+  // Single fetch — filter client-side so we always have all dates available
   const { data } = useQuery<Stereogram[]>({
-    queryKey: ["stereograms", dateFilter, statusFilter],
-    queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (dateFilter) params.date = dateFilter;
-      if (statusFilter) params.status = statusFilter;
-      const res = await api.listStereograms(params);
-      return res.data;
-    },
+    queryKey: ["stereograms"],
+    queryFn: async () => (await api.listStereograms({})).data,
     refetchInterval: (query) => {
-      const data = query.state.data;
-      if (!data) return 2000;
-      const hasGenerating = (data as Stereogram[]).some((s) => s.status === "generating");
-      return hasGenerating ? 2000 : false;
+      const rows = query.state.data as Stereogram[] | undefined;
+      return rows?.some((s) => s.status === "generating") ? 2000 : false;
     },
   });
 
-  const stereograms = data || [];
+  const allStereograms = data || [];
+
+  // Client-side filtering
+  const stereograms = allStereograms.filter((s) => {
+    if (dateFilter && s.scheduled_date !== dateFilter) return false;
+    if (statusFilter && s.status !== statusFilter) return false;
+    return true;
+  });
+
+  const uniqueDates = Array.from(new Set(allStereograms.map((s) => s.scheduled_date))).sort();
+
+  // Button visible only when a date is selected and ALL items for that date are generated
+  const dateItems = dateFilter ? allStereograms.filter((s) => s.scheduled_date === dateFilter) : [];
+  const allGenerated = dateFilter.length > 0 && dateItems.length > 0 && dateItems.every((s) => s.status === "generated");
 
   const handleCSVChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,15 +69,13 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
       setImportResult("CSV import failed. Check your file format.");
     } finally {
       setImporting(false);
-      // reset so the same file can be re-uploaded
       if (csvInputRef.current) csvInputRef.current.value = "";
     }
   };
 
-  // CSV template download
   const handleDownloadTemplate = () => {
-    const headers = "scheduled_date,background_pattern,hidden_object,theme,depth_intensity,color_mode,dot_density";
-    const example = "2026-04-10,Polka Dot Swirl,Rainbow Unicorn,Spring,0.35,random,5";
+    const headers = "scheduled_date,background_pattern,hidden_object,hidden_object_type,theme,depth_intensity,color_mode,dot_density";
+    const example = "2026-04-10,Polka Dot Swirl,Rainbow Unicorn,image,Spring,0.35,random,5";
     const blob = new Blob([`${headers}\n${example}\n`], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -86,7 +92,7 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
         <p className="text-sm text-gray-500 mt-1">The Magic Eye 3D — Content Calendar</p>
       </div>
 
-      <StatsCards stereograms={stereograms} />
+      <StatsCards stereograms={allStereograms} />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -96,8 +102,11 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
           className="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
           <option value="">All dates</option>
-          <option value="2026-04-01">Apr 1, 2026</option>
-          <option value="2026-04-02">Apr 2, 2026</option>
+          {uniqueDates.map((d) => (
+            <option key={d} value={d}>
+              {new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </option>
+          ))}
         </select>
 
         <select
@@ -113,18 +122,8 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
 
         <div className="flex-1" />
 
-        {/* Import CSV */}
-        <input
-          ref={csvInputRef}
-          type="file"
-          accept=".csv"
-          className="hidden"
-          onChange={handleCSVChange}
-        />
-        <button
-          onClick={handleDownloadTemplate}
-          className="text-xs text-gray-500 hover:text-gray-700 underline"
-        >
+        <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCSVChange} />
+        <button onClick={handleDownloadTemplate} className="text-xs text-gray-500 hover:text-gray-700 underline">
           CSV template
         </button>
         <button
@@ -137,6 +136,19 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
           </svg>
           {importing ? "Importing..." : "Import CSV"}
         </button>
+
+        {allGenerated && (
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="text-sm font-medium border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Generate post
+          </button>
+        )}
+
         <button
           onClick={() => setShowAddModal(true)}
           className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"
@@ -148,7 +160,6 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
         </button>
       </div>
 
-      {/* Import feedback */}
       {importResult && (
         <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${importResult.includes("failed") || importResult.includes("errors") ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>
           {importResult}
@@ -169,18 +180,20 @@ export function QueueTable({ selectedId, onSelect }: QueueTableProps) {
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
             {stereograms.map((s) => (
-              <QueueRow
-                key={s.id}
-                stereogram={s}
-                isSelected={s.id === selectedId}
-                onClick={() => onSelect(s)}
-              />
+              <QueueRow key={s.id} stereogram={s} isSelected={s.id === selectedId} onClick={() => onSelect(s)} />
             ))}
           </tbody>
         </table>
       </div>
 
       {showAddModal && <AddItemModal onClose={() => setShowAddModal(false)} />}
+      {showPostModal && (
+        <GeneratePostModal
+          defaultDate={dateFilter}
+          stereogramsForDate={dateItems}
+          onClose={() => setShowPostModal(false)}
+        />
+      )}
     </div>
   );
 }

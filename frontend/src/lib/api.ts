@@ -21,4 +21,8 @@ export const api = {
     axios.post(`${BASE}/api/stereograms/import/csv`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  previewPost: (date: string, stereogramIds?: number[]) =>
+    axios.post(`${BASE}/api/posts/preview`, { date, stereogram_ids: stereogramIds }),
+  publishPost: (date: string, status: "draft" | "publish", stereogramIds?: number[]) =>
+    axios.post(`${BASE}/api/posts/publish`, { date, status, stereogram_ids: stereogramIds }),
 };

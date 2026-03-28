@@ -46,12 +46,16 @@ def do_generate(stereogram_id: int, db_url: str):
             "color_mode": item.color_mode,
         }
 
-        img = generate_stereogram(params)
+        img, depth_map_img = generate_stereogram(params)
 
         os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
         filename = f"stereogram_{stereogram_id}.png"
         filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
         img.save(filepath, "PNG")
+
+        depth_filename = f"depth_map_{stereogram_id}.png"
+        depth_filepath = os.path.join(GENERATED_IMAGES_DIR, depth_filename)
+        depth_map_img.save(depth_filepath, "PNG")
 
         # Upload to Supabase if configured, otherwise serve locally
         from services.storage import is_available as storage_available, upload_image
@@ -63,8 +67,16 @@ def do_generate(stereogram_id: int, db_url: str):
             except Exception as e:
                 print(f"[Supabase] Upload failed, serving locally: {e}")
                 item.image_url = f"/static/{filename}?v={int(time.time())}"
+            try:
+                depth_url = upload_image(depth_filepath, depth_filename)
+                item.depth_map_url = depth_url
+                print(f"[Supabase] Uploaded {depth_filename} → {depth_url}")
+            except Exception as e:
+                print(f"[Supabase] Depth map upload failed, serving locally: {e}")
+                item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
         else:
             item.image_url = f"/static/{filename}?v={int(time.time())}"
+            item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
 
         item.image_filename = filename
         item.status = "generated"

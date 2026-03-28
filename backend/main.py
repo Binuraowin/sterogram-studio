@@ -13,6 +13,7 @@ load_dotenv()
 from database import engine, SessionLocal, Base
 from models import Stereogram
 from routers.stereograms import router as stereograms_router
+from routers.posts import router as posts_router
 
 GENERATED_IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
 
@@ -34,6 +35,7 @@ def run_migrations(db: Session):
     """Add any missing columns to existing tables."""
     migrations = [
         "ALTER TABLE stereograms ADD COLUMN hidden_object_type VARCHAR DEFAULT 'image'",
+        "ALTER TABLE stereograms ADD COLUMN depth_map_url VARCHAR",
     ]
     for sql in migrations:
         try:
@@ -78,6 +80,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=GENERATED_IMAGES_DIR), name="static")
 
 app.include_router(stereograms_router, prefix="/api/stereograms")
+app.include_router(posts_router, prefix="/api/posts")
 
 
 @app.get("/health")

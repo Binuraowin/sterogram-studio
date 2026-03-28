@@ -15,6 +15,7 @@ class Stereogram(Base):
     status = Column(String, default="not_started", nullable=False)
     image_filename = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
+    depth_map_url = Column(String, nullable=True)
     depth_intensity = Column(Float, default=0.35)
     color_mode = Column(String, default="random")
     dot_density = Column(Integer, default=5)

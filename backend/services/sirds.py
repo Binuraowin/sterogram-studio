@@ -106,7 +106,8 @@ def generate_noise_strip(
     return np.array(strip_img, dtype=np.uint8)
 
 
-def generate_stereogram(params: dict) -> Image.Image:
+def generate_stereogram(params: dict) -> tuple:
+    """Returns (stereogram_img, depth_map_img) as PIL Images."""
     hidden_object = params.get("hidden_object", "HELLO")
     background_pattern = params.get("background_pattern", "")
     width = params.get("width", 1200)
@@ -119,6 +120,9 @@ def generate_stereogram(params: dict) -> Image.Image:
 
     hidden_object_type = params.get("hidden_object_type", "image")
     depth_map = generate_depth_map(hidden_object, width, height, hidden_object_type)
+
+    # Convert depth map array to a saveable PIL image (grayscale → RGB)
+    depth_map_pil = Image.fromarray((depth_map * 255).astype(np.uint8), mode="L").convert("RGB")
 
     strip_width = width // 10
 
@@ -140,4 +144,4 @@ def generate_stereogram(params: dict) -> Image.Image:
             result[y, x] = result[y, src_x]
 
     img = Image.fromarray(result, mode="RGB")
-    return img
+    return img, depth_map_pil

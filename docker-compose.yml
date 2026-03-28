@@ -15,6 +15,9 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_BUCKET=${SUPABASE_BUCKET:-stereograms}
+      - WP_URL=${WP_URL}
+      - WP_USER=${WP_USER}
+      - WP_APP_PASSWORD=${WP_APP_PASSWORD}
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
