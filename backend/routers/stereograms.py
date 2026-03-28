@@ -6,7 +6,7 @@ from datetime import date
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -63,14 +63,16 @@ def do_generate(stereogram_id: int, db_url: str):
             try:
                 public_url = upload_image(filepath, filename)
                 item.image_url = public_url
-                print(f"[Supabase] Uploaded {filename} → {public_url}")
+                os.remove(filepath)
+                print(f"[Supabase] Uploaded and removed local {filename}")
             except Exception as e:
                 print(f"[Supabase] Upload failed, serving locally: {e}")
                 item.image_url = f"/static/{filename}?v={int(time.time())}"
             try:
                 depth_url = upload_image(depth_filepath, depth_filename)
                 item.depth_map_url = depth_url
-                print(f"[Supabase] Uploaded {depth_filename} → {depth_url}")
+                os.remove(depth_filepath)
+                print(f"[Supabase] Uploaded and removed local {depth_filename}")
             except Exception as e:
                 print(f"[Supabase] Depth map upload failed, serving locally: {e}")
                 item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
@@ -274,9 +276,16 @@ def download_stereogram(stereogram_id: int, db: Session = Depends(get_db)):
     item = db.query(Stereogram).filter(Stereogram.id == stereogram_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Stereogram not found")
-    if not item.image_filename:
+    if not item.image_url:
         raise HTTPException(status_code=404, detail="Image not generated yet")
 
+    # If stored in Supabase, redirect to the public URL
+    if item.image_url.startswith("http"):
+        return RedirectResponse(url=item.image_url)
+
+    # Local fallback
+    if not item.image_filename:
+        raise HTTPException(status_code=404, detail="Image not found")
     filepath = os.path.join(GENERATED_IMAGES_DIR, item.image_filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Image file not found")
