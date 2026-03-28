@@ -1,7 +1,7 @@
 import axios from "axios";
 import { UpdateStereogramPayload, CreateStereogramPayload } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const api = {
   listStereograms: (params?: { date?: string; status?: string }) =>

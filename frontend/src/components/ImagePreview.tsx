@@ -20,7 +20,7 @@ interface ImagePreviewProps {
 }
 
 export function ImagePreview({ stereogram }: ImagePreviewProps) {
-  const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
   const [captions, setCaptions] = useState<Captions | null>(null);
   const [loadingCaption, setLoadingCaption] = useState(false);
   const [captionError, setCaptionError] = useState<string | null>(null);
