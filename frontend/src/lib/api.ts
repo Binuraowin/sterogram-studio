@@ -1,5 +1,5 @@
 import axios from "axios";
-import { UpdateStereogramPayload } from "./types";
+import { UpdateStereogramPayload, CreateStereogramPayload } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -15,4 +15,10 @@ export const api = {
   regenerateStereogram: (id: number) =>
     axios.post(`${BASE}/api/stereograms/${id}/regenerate`),
   downloadUrl: (id: number) => `${BASE}/api/stereograms/${id}/download`,
+  createStereogram: (data: CreateStereogramPayload) =>
+    axios.post(`${BASE}/api/stereograms`, data),
+  importCSV: (formData: FormData) =>
+    axios.post(`${BASE}/api/stereograms/import/csv`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };

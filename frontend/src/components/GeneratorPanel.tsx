@@ -47,6 +47,7 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
       setLocalForm({
         background_pattern: selectedStereogram.background_pattern,
         hidden_object: selectedStereogram.hidden_object,
+        hidden_object_type: selectedStereogram.hidden_object_type ?? "image",
         theme: selectedStereogram.theme,
         depth_intensity: selectedStereogram.depth_intensity,
         color_mode: selectedStereogram.color_mode,
@@ -122,6 +123,7 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
   const formData = {
     background_pattern: localForm.background_pattern ?? stereogram.background_pattern,
     hidden_object: localForm.hidden_object ?? stereogram.hidden_object,
+    hidden_object_type: (localForm.hidden_object_type ?? stereogram.hidden_object_type ?? "image") as "text" | "image",
     theme: localForm.theme ?? stereogram.theme,
     depth_intensity: localForm.depth_intensity ?? stereogram.depth_intensity,
     color_mode: localForm.color_mode ?? stereogram.color_mode,
@@ -167,12 +169,33 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Hidden object</label>
-          <input
-            type="text"
-            value={formData.hidden_object}
-            onChange={(e) => handleChange("hidden_object", e.target.value)}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.hidden_object}
+              onChange={(e) => handleChange("hidden_object", e.target.value)}
+              className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => handleChange("hidden_object_type", "image")}
+                className={`px-3 py-2 transition-colors ${formData.hidden_object_type === "image" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Image
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChange("hidden_object_type", "text")}
+                className={`px-3 py-2 transition-colors ${formData.hidden_object_type === "text" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Text
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {formData.hidden_object_type === "image" ? "AI generates a silhouette of this object" : "This text appears as the hidden 3D shape"}
+          </p>
         </div>
 
         <div>

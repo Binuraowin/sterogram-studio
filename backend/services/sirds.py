@@ -22,17 +22,20 @@ def get_color_mode(background_pattern: str, requested_mode: str = "random") -> s
     return COLOR_MODE_MAP.get(background_pattern, "random")
 
 
-def generate_depth_map(hidden_object: str, width: int, height: int) -> np.ndarray:
-    # Try HF-generated silhouette first
-    try:
-        from services.hf_client import is_available, generate_object_depth_map
-        if is_available():
-            print(f"[HF] Generating depth map for: {hidden_object}")
-            return generate_object_depth_map(hidden_object, width, height)
-    except Exception as e:
-        print(f"[HF] Depth map failed, falling back to text render: {e}")
+def generate_depth_map(hidden_object: str, width: int, height: int, hidden_object_type: str = "image") -> np.ndarray:
+    # Use HF to generate an image silhouette only when type is "image"
+    if hidden_object_type == "image":
+        try:
+            from services.hf_client import is_available, generate_object_depth_map
+            if is_available():
+                print(f"[HF] Generating depth map image for: {hidden_object}")
+                return generate_object_depth_map(hidden_object, width, height)
+        except Exception as e:
+            print(f"[HF] Depth map failed, falling back to text render: {e}")
+    else:
+        print(f"[Text] Rendering text depth map for: {hidden_object}")
 
-    # Fallback: draw the hidden object name as text
+    # Fallback / explicit text mode: draw the hidden object name as text
     img = Image.new("L", (width, height), color=0)
     draw = ImageDraw.Draw(img)
 
@@ -114,7 +117,8 @@ def generate_stereogram(params: dict) -> Image.Image:
 
     color_mode = get_color_mode(background_pattern, color_mode)
 
-    depth_map = generate_depth_map(hidden_object, width, height)
+    hidden_object_type = params.get("hidden_object_type", "image")
+    depth_map = generate_depth_map(hidden_object, width, height, hidden_object_type)
 
     strip_width = width // 10
 

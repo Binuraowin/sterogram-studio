@@ -30,6 +30,19 @@ SEED_DATA = [
 ]
 
 
+def run_migrations(db: Session):
+    """Add any missing columns to existing tables."""
+    migrations = [
+        "ALTER TABLE stereograms ADD COLUMN hidden_object_type VARCHAR DEFAULT 'image'",
+    ]
+    for sql in migrations:
+        try:
+            db.execute(__import__("sqlalchemy").text(sql))
+            db.commit()
+        except Exception:
+            db.rollback()  # column already exists — safe to ignore
+
+
 def seed_database(db: Session):
     count = db.query(Stereogram).count()
     if count == 0:
@@ -45,6 +58,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        run_migrations(db)
         seed_database(db)
     finally:
         db.close()

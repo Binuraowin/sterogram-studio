@@ -1,15 +1,18 @@
+import csv
+import io
 import os
 import time
 from datetime import date
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import FileResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Stereogram
-from schemas import StereogramResponse, StereogramUpdate
+from schemas import StereogramResponse, StereogramUpdate, StereogramCreate
 from services.sirds import generate_stereogram
 
 router = APIRouter()
@@ -30,11 +33,11 @@ def do_generate(stereogram_id: int, db_url: str):
         if not item:
             return
 
-        size_map = {"800x600": (800, 600), "1200x800": (1200, 800), "1920x1080": (1920, 1080)}
         width, height = 1200, 800
 
         params = {
             "hidden_object": item.hidden_object,
+            "hidden_object_type": item.hidden_object_type or "image",
             "background_pattern": item.background_pattern,
             "width": width,
             "height": height,
@@ -50,8 +53,20 @@ def do_generate(stereogram_id: int, db_url: str):
         filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
         img.save(filepath, "PNG")
 
+        # Upload to Supabase if configured, otherwise serve locally
+        from services.storage import is_available as storage_available, upload_image
+        if storage_available():
+            try:
+                public_url = upload_image(filepath, filename)
+                item.image_url = public_url
+                print(f"[Supabase] Uploaded {filename} → {public_url}")
+            except Exception as e:
+                print(f"[Supabase] Upload failed, serving locally: {e}")
+                item.image_url = f"/static/{filename}?v={int(time.time())}"
+        else:
+            item.image_url = f"/static/{filename}?v={int(time.time())}"
+
         item.image_filename = filename
-        item.image_url = f"/static/{filename}?v={int(time.time())}"
         item.status = "generated"
         db.commit()
     except Exception as e:
@@ -63,6 +78,8 @@ def do_generate(stereogram_id: int, db_url: str):
     finally:
         db.close()
 
+
+# ── List ──────────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[StereogramResponse])
 def list_stereograms(
@@ -82,6 +99,72 @@ def list_stereograms(
     return query.order_by(Stereogram.id).all()
 
 
+# ── Create (single) ───────────────────────────────────────────────────────────
+
+@router.post("", response_model=StereogramResponse, status_code=201)
+def create_stereogram(payload: StereogramCreate, db: Session = Depends(get_db)):
+    post_number = payload.post_number
+    if post_number is None:
+        max_num = db.query(func.max(Stereogram.post_number)).scalar() or 0
+        post_number = max_num + 1
+
+    item = Stereogram(
+        background_pattern=payload.background_pattern,
+        hidden_object=payload.hidden_object,
+        hidden_object_type=payload.hidden_object_type,
+        theme=payload.theme,
+        scheduled_date=payload.scheduled_date,
+        depth_intensity=payload.depth_intensity,
+        color_mode=payload.color_mode,
+        dot_density=payload.dot_density,
+        post_number=post_number,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+# ── CSV import ────────────────────────────────────────────────────────────────
+
+@router.post("/import/csv")
+async def import_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    content = await file.read()
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    max_num = db.query(func.max(Stereogram.post_number)).scalar() or 0
+
+    created = 0
+    errors = []
+    for i, row in enumerate(reader):
+        try:
+            max_num += 1
+            item = Stereogram(
+                background_pattern=row["background_pattern"].strip(),
+                hidden_object=row["hidden_object"].strip(),
+                hidden_object_type=row.get("hidden_object_type", "image").strip(),
+                theme=row.get("theme", "General").strip(),
+                scheduled_date=date.fromisoformat(row["scheduled_date"].strip()),
+                depth_intensity=float(row.get("depth_intensity", 0.35)),
+                color_mode=row.get("color_mode", "random").strip(),
+                dot_density=int(row.get("dot_density", 5)),
+                post_number=int(row["post_number"]) if row.get("post_number") else max_num,
+            )
+            db.add(item)
+            created += 1
+        except Exception as e:
+            errors.append(f"Row {i + 2}: {e}")
+
+    db.commit()
+    return {"imported": created, "errors": errors}
+
+
+# ── Get one ───────────────────────────────────────────────────────────────────
+
 @router.get("/{stereogram_id}", response_model=StereogramResponse)
 def get_stereogram(stereogram_id: int, db: Session = Depends(get_db)):
     item = db.query(Stereogram).filter(Stereogram.id == stereogram_id).first()
@@ -89,6 +172,8 @@ def get_stereogram(stereogram_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Stereogram not found")
     return item
 
+
+# ── Update ────────────────────────────────────────────────────────────────────
 
 @router.put("/{stereogram_id}", response_model=StereogramResponse)
 def update_stereogram(
@@ -109,6 +194,8 @@ def update_stereogram(
     return item
 
 
+# ── Generate / Regenerate ─────────────────────────────────────────────────────
+
 @router.post("/{stereogram_id}/generate", response_model=StereogramResponse)
 def generate(
     stereogram_id: int,
@@ -126,10 +213,8 @@ def generate(
     db.commit()
     db.refresh(item)
 
-    import os
     db_url = os.getenv("DATABASE_URL", "sqlite:///./stereogram_studio.db")
     background_tasks.add_task(do_generate, stereogram_id, db_url)
-
     return item
 
 
@@ -147,12 +232,12 @@ def regenerate(
     db.commit()
     db.refresh(item)
 
-    import os
     db_url = os.getenv("DATABASE_URL", "sqlite:///./stereogram_studio.db")
     background_tasks.add_task(do_generate, stereogram_id, db_url)
-
     return item
 
+
+# ── Download ──────────────────────────────────────────────────────────────────
 
 @router.get("/{stereogram_id}/download")
 def download_stereogram(stereogram_id: int, db: Session = Depends(get_db)):

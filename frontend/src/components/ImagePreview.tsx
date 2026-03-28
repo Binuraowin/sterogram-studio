@@ -26,7 +26,10 @@ export function ImagePreview({ stereogram }: ImagePreviewProps) {
     return null;
   }
 
-  const imageFullUrl = `${BASE}${stereogram.image_url}`;
+  // Supabase URLs are absolute; local paths need the backend base prepended
+  const imageFullUrl = stereogram.image_url?.startsWith("http")
+    ? stereogram.image_url
+    : `${BASE}${stereogram.image_url}`;
   const downloadUrl = api.downloadUrl(stereogram.id);
 
   return (

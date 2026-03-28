@@ -18,5 +18,6 @@ class Stereogram(Base):
     depth_intensity = Column(Float, default=0.35)
     color_mode = Column(String, default="random")
     dot_density = Column(Integer, default=5)
+    hidden_object_type = Column(String, default="image")  # "text" or "image"
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -12,6 +12,9 @@ services:
       - DATABASE_URL=sqlite:///./stereogram_studio.db
       - HF_TOKEN=${HF_TOKEN}
       - HF_MODEL=${HF_MODEL:-black-forest-labs/FLUX.1-schnell}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_BUCKET=${SUPABASE_BUCKET:-stereograms}
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:

@@ -4,6 +4,7 @@ export interface Stereogram {
   id: number;
   background_pattern: string;
   hidden_object: string;
+  hidden_object_type: "text" | "image";
   theme: string;
   post_number: number;
   scheduled_date: string; // "2026-04-01"
@@ -20,8 +21,21 @@ export interface Stereogram {
 export interface UpdateStereogramPayload {
   background_pattern?: string;
   hidden_object?: string;
+  hidden_object_type?: "text" | "image";
   theme?: string;
   depth_intensity?: number;
   color_mode?: string;
   dot_density?: number;
+}
+
+export interface CreateStereogramPayload {
+  background_pattern: string;
+  hidden_object: string;
+  hidden_object_type?: "text" | "image";
+  theme: string;
+  scheduled_date: string; // "YYYY-MM-DD"
+  depth_intensity?: number;
+  color_mode?: string;
+  dot_density?: number;
+  post_number?: number;
 }

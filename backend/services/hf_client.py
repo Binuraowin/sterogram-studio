@@ -36,8 +36,9 @@ def generate_object_depth_map(hidden_object: str, width: int, height: int) -> np
     """Generate a depth map for the hidden object using HF text-to-image."""
     client = _get_client()
     prompt = (
-        f"{hidden_object}, black silhouette on pure white background, "
-        "centered, simple clean shape, flat illustration, no text, no background details, minimal"
+        f"solid black silhouette shape of a {hidden_object}, pure white background, "
+        "centered, single object, no text, no words, no letters, no typography, "
+        "no outline, filled solid black shape only, clip art style, vector art, minimal"
     )
     image = client.text_to_image(prompt, model=HF_MODEL)
     image = image.resize((width, height), Image.LANCZOS).convert("L")
