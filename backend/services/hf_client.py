@@ -42,6 +42,12 @@ def generate_object_depth_map(hidden_object: str, width: int, height: int) -> np
     )
     image = client.text_to_image(prompt, model=HF_MODEL)
     image = image.resize((width, height), Image.LANCZOS).convert("L")
-    # Invert: black silhouette on white → white (high depth) on black → object pops forward
+
+    # FLUX rarely produces pure black/white — stretch contrast then threshold
+    # so we always get a crisp silhouette regardless of what the model returned
+    image = ImageOps.autocontrast(image, cutoff=2)
+    image = image.point(lambda p: 0 if p < 140 else 255)
+
+    # Invert: dark silhouette → white (high depth) so object pops forward
     image = ImageOps.invert(image)
     return np.array(image, dtype=np.float32) / 255.0
