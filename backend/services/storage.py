@@ -1,4 +1,5 @@
 import os
+import time
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
@@ -33,4 +34,5 @@ def upload_image(filepath: str, filename: str) -> str:
         file_options={"content-type": "image/png", "upsert": "true"},
     )
 
-    return client.storage.from_(BUCKET_NAME).get_public_url(filename)
+    public_url = client.storage.from_(BUCKET_NAME).get_public_url(filename)
+    return f"{public_url}?v={int(time.time())}"

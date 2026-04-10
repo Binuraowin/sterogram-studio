@@ -5,6 +5,7 @@ export interface Stereogram {
   background_pattern: string;
   hidden_object: string;
   hidden_object_type: "text" | "image";
+  content_type: "stereogram" | "illusion";
   theme: string;
   post_number: number;
   scheduled_date: string; // "2026-04-01"
@@ -23,6 +24,7 @@ export interface UpdateStereogramPayload {
   background_pattern?: string;
   hidden_object?: string;
   hidden_object_type?: "text" | "image";
+  content_type?: "stereogram" | "illusion";
   theme?: string;
   depth_intensity?: number;
   color_mode?: string;
@@ -42,6 +44,7 @@ export interface CreateStereogramPayload {
   background_pattern: string;
   hidden_object: string;
   hidden_object_type?: "text" | "image";
+  content_type?: "stereogram" | "illusion";
   theme: string;
   scheduled_date: string; // "YYYY-MM-DD"
   depth_intensity?: number;

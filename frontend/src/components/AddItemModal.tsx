@@ -13,10 +13,12 @@ const COLOR_MODE_OPTIONS = ["random", "warm", "cool", "festive"];
 
 export function AddItemModal({ onClose }: AddItemModalProps) {
   const queryClient = useQueryClient();
+  const [contentType, setContentType] = useState<"stereogram" | "illusion">("stereogram");
   const [form, setForm] = useState<CreateStereogramPayload>({
     background_pattern: "",
     hidden_object: "",
     hidden_object_type: "image",
+    content_type: "stereogram",
     theme: "",
     scheduled_date: new Date().toISOString().slice(0, 10),
     depth_intensity: 0.35,
@@ -28,6 +30,18 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
 
   const set = (field: keyof CreateStereogramPayload, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleContentTypeToggle = (type: "stereogram" | "illusion") => {
+    setContentType(type);
+    setForm((prev) => ({
+      ...prev,
+      content_type: type,
+      background_pattern: "",
+      hidden_object: "",
+    }));
+  };
+
+  const isIllusion = contentType === "illusion";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +67,28 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Content type toggle */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Content type</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => handleContentTypeToggle("stereogram")}
+                className={`flex-1 px-3 py-2 transition-colors ${!isIllusion ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Magic Eye Stereogram
+              </button>
+              <button
+                type="button"
+                onClick={() => handleContentTypeToggle("illusion")}
+                className={`flex-1 px-3 py-2 transition-colors ${isIllusion ? "bg-violet-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Optical Illusion
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Scheduled date *</label>
@@ -72,93 +108,160 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
                 placeholder="e.g. April Fools"
                 value={form.theme}
                 onChange={(e) => set("theme", e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className={`w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${isIllusion ? "focus:ring-violet-300" : "focus:ring-indigo-300"}`}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Background pattern *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Confetti Explosion"
-              value={form.background_pattern}
-              onChange={(e) => set("background_pattern", e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Hidden object *</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                required
-                placeholder={form.hidden_object_type === "text" ? "e.g. GOTCHA" : "e.g. Rubber Duck"}
-                value={form.hidden_object}
-                onChange={(e) => set("hidden_object", e.target.value)}
-                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => set("hidden_object_type", "image")}
-                  className={`px-3 py-2 transition-colors ${form.hidden_object_type === "image" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                >
-                  Image
-                </button>
-                <button
-                  type="button"
-                  onClick={() => set("hidden_object_type", "text")}
-                  className={`px-3 py-2 transition-colors ${form.hidden_object_type === "text" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                >
-                  Text
-                </button>
+          {isIllusion ? (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Scene description *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. misty forest at dawn"
+                  value={form.background_pattern}
+                  onChange={(e) => set("background_pattern", e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                />
+                <p className="text-xs text-gray-400 mt-1">Reference for the scene you plan to use on IllusionDiffusion</p>
               </div>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {form.hidden_object_type === "image" ? "AI generates a silhouette of this object" : "This text appears as the hidden 3D shape"}
-            </p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Depth intensity <span className="text-indigo-600 font-semibold">{Number(form.depth_intensity).toFixed(2)}</span>
-              </label>
-              <input
-                type="range" min={0.1} max={0.6} step={0.01}
-                value={form.depth_intensity}
-                onChange={(e) => set("depth_intensity", parseFloat(e.target.value))}
-                className="w-full accent-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Dot density <span className="text-indigo-600 font-semibold">{form.dot_density}</span>
-              </label>
-              <input
-                type="range" min={1} max={10} step={1}
-                value={form.dot_density}
-                onChange={(e) => set("dot_density", parseInt(e.target.value))}
-                className="w-full accent-indigo-500"
-              />
-            </div>
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hidden object *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder={form.hidden_object_type === "text" ? "e.g. LOVE" : "e.g. Rubber Duck"}
+                    value={form.hidden_object}
+                    onChange={(e) => set("hidden_object", e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  />
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => set("hidden_object_type", "image")}
+                      className={`px-3 py-2 transition-colors ${form.hidden_object_type === "image" ? "bg-violet-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set("hidden_object_type", "text")}
+                      className={`px-3 py-2 transition-colors ${form.hidden_object_type === "text" ? "bg-violet-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      Text
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Generate will produce the silhouette for this object — upload it to IllusionDiffusion
+                </p>
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Color mode</label>
-            <select
-              value={form.color_mode}
-              onChange={(e) => set("color_mode", e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              {COLOR_MODE_OPTIONS.map((m) => (
-                <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
-              ))}
-            </select>
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Silhouette strength <span className="text-violet-600 font-semibold">{Number(form.depth_intensity).toFixed(2)}</span>
+                </label>
+                <input
+                  type="range" min={0.1} max={0.6} step={0.01}
+                  value={form.depth_intensity}
+                  onChange={(e) => set("depth_intensity", parseFloat(e.target.value))}
+                  className="w-full accent-violet-500"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                  <span>Subtle</span><span>Strong</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Background pattern *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Confetti Explosion"
+                  value={form.background_pattern}
+                  onChange={(e) => set("background_pattern", e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hidden object *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder={form.hidden_object_type === "text" ? "e.g. GOTCHA" : "e.g. Rubber Duck"}
+                    value={form.hidden_object}
+                    onChange={(e) => set("hidden_object", e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => set("hidden_object_type", "image")}
+                      className={`px-3 py-2 transition-colors ${form.hidden_object_type === "image" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set("hidden_object_type", "text")}
+                      className={`px-3 py-2 transition-colors ${form.hidden_object_type === "text" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      Text
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {form.hidden_object_type === "image" ? "AI generates a silhouette of this object" : "This text appears as the hidden 3D shape"}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Depth intensity <span className="text-indigo-600 font-semibold">{Number(form.depth_intensity).toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range" min={0.1} max={0.6} step={0.01}
+                    value={form.depth_intensity}
+                    onChange={(e) => set("depth_intensity", parseFloat(e.target.value))}
+                    className="w-full accent-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Dot density <span className="text-indigo-600 font-semibold">{form.dot_density}</span>
+                  </label>
+                  <input
+                    type="range" min={1} max={10} step={1}
+                    value={form.dot_density}
+                    onChange={(e) => set("dot_density", parseInt(e.target.value))}
+                    className="w-full accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Color mode</label>
+                <select
+                  value={form.color_mode}
+                  onChange={(e) => set("color_mode", e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                  {COLOR_MODE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -173,7 +276,7 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60"
+              className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-60 ${isIllusion ? "bg-violet-600 hover:bg-violet-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
             >
               {saving ? "Adding..." : "Add item"}
             </button>

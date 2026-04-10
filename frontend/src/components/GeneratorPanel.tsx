@@ -130,6 +130,8 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
     dot_density: localForm.dot_density ?? stereogram.dot_density,
   };
 
+  const isIllusion = (stereogram.content_type ?? "stereogram") === "illusion";
+
   const dateStr = new Date(stereogram.scheduled_date + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -158,13 +160,18 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Background pattern</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {isIllusion ? "Scene description" : "Background pattern"}
+          </label>
           <input
             type="text"
             value={formData.background_pattern}
             onChange={(e) => handleChange("background_pattern", e.target.value)}
             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
+          {isIllusion && (
+            <p className="text-xs text-gray-400 mt-1">Reference scene for IllusionDiffusion</p>
+          )}
         </div>
 
         <div>
@@ -194,7 +201,9 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            {formData.hidden_object_type === "image" ? "AI generates a silhouette of this object" : "This text appears as the hidden 3D shape"}
+            {isIllusion
+              ? "Generate will produce the silhouette — upload it to IllusionDiffusion"
+              : formData.hidden_object_type === "image" ? "AI generates a silhouette of this object" : "This text appears as the hidden 3D shape"}
           </p>
         </div>
 
@@ -208,18 +217,20 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Color mode</label>
-          <select
-            value={formData.color_mode}
-            onChange={(e) => handleChange("color_mode", e.target.value)}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          >
-            {COLOR_MODE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+        {!isIllusion && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Color mode</label>
+            <select
+              value={formData.color_mode}
+              onChange={(e) => handleChange("color_mode", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              {COLOR_MODE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -242,24 +253,26 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Dot density{" "}
-            <span className="text-indigo-600 font-semibold">{formData.dot_density}</span>
-          </label>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            step={1}
-            value={formData.dot_density}
-            onChange={(e) => handleChange("dot_density", parseInt(e.target.value))}
-            className="w-full accent-indigo-500"
-          />
-          <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-            <span>1</span><span>10</span>
+        {!isIllusion && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dot density{" "}
+              <span className="text-indigo-600 font-semibold">{formData.dot_density}</span>
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={formData.dot_density}
+              onChange={(e) => handleChange("dot_density", parseInt(e.target.value))}
+              className="w-full accent-indigo-500"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+              <span>1</span><span>10</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Output size</label>
@@ -293,6 +306,8 @@ export function GeneratorPanel({ selectedStereogram }: GeneratorPanelProps) {
             </>
           ) : stereogram.status === "generated" ? (
             "Regenerate"
+          ) : isIllusion ? (
+            "Generate silhouette"
           ) : (
             "Generate stereogram"
           )}

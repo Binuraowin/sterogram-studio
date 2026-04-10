@@ -36,6 +36,7 @@ def run_migrations(db: Session):
     migrations = [
         "ALTER TABLE stereograms ADD COLUMN hidden_object_type VARCHAR DEFAULT 'image'",
         "ALTER TABLE stereograms ADD COLUMN depth_map_url VARCHAR",
+        "ALTER TABLE stereograms ADD COLUMN content_type VARCHAR DEFAULT 'stereogram'",
     ]
     for sql in migrations:
         try:

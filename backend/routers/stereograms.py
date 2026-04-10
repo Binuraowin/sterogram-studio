@@ -35,29 +35,39 @@ def do_generate(stereogram_id: int, db_url: str):
 
         width, height = 1200, 800
 
-        params = {
-            "hidden_object": item.hidden_object,
-            "hidden_object_type": item.hidden_object_type or "image",
-            "background_pattern": item.background_pattern,
-            "width": width,
-            "height": height,
-            "depth_intensity": item.depth_intensity,
-            "dot_density": item.dot_density,
-            "color_mode": item.color_mode,
-        }
-
-        img, depth_map_img = generate_stereogram(params)
-
         os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
         filename = f"stereogram_{stereogram_id}.png"
         filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
-        img.save(filepath, "PNG")
 
-        depth_filename = f"depth_map_{stereogram_id}.png"
-        depth_filepath = os.path.join(GENERATED_IMAGES_DIR, depth_filename)
-        depth_map_img.save(depth_filepath, "PNG")
+        content_type = item.content_type or "stereogram"
 
-        # Upload to Supabase if configured, otherwise serve locally
+        if content_type == "illusion":
+            # Generate silhouette only — user uploads this to IllusionDiffusion
+            from PIL import Image as PILImage
+            from services.sirds import generate_depth_map
+            depth_arr = generate_depth_map(
+                item.hidden_object, width, height, item.hidden_object_type or "image"
+            )
+            import numpy as np
+            silhouette_pil = PILImage.fromarray((depth_arr * 255).astype(np.uint8)).convert("RGB")
+            silhouette_pil.save(filepath, "PNG")
+            depth_map_img = None
+            print(f"[Illusion] silhouette saved for: {item.hidden_object}")
+        else:
+            params = {
+                "hidden_object": item.hidden_object,
+                "hidden_object_type": item.hidden_object_type or "image",
+                "background_pattern": item.background_pattern,
+                "width": width,
+                "height": height,
+                "depth_intensity": item.depth_intensity,
+                "dot_density": item.dot_density,
+                "color_mode": item.color_mode,
+            }
+            img, depth_map_img = generate_stereogram(params)
+            img.save(filepath, "PNG")
+
+        # Upload main image to Supabase if configured, otherwise serve locally
         from services.storage import is_available as storage_available, upload_image
         if storage_available():
             try:
@@ -68,17 +78,25 @@ def do_generate(stereogram_id: int, db_url: str):
             except Exception as e:
                 print(f"[Supabase] Upload failed, serving locally: {e}")
                 item.image_url = f"/static/{filename}?v={int(time.time())}"
-            try:
-                depth_url = upload_image(depth_filepath, depth_filename)
-                item.depth_map_url = depth_url
-                os.remove(depth_filepath)
-                print(f"[Supabase] Uploaded and removed local {depth_filename}")
-            except Exception as e:
-                print(f"[Supabase] Depth map upload failed, serving locally: {e}")
-                item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
         else:
             item.image_url = f"/static/{filename}?v={int(time.time())}"
-            item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
+
+        # Save depth map only for stereograms
+        if depth_map_img is not None:
+            depth_filename = f"depth_map_{stereogram_id}.png"
+            depth_filepath = os.path.join(GENERATED_IMAGES_DIR, depth_filename)
+            depth_map_img.save(depth_filepath, "PNG")
+            if storage_available():
+                try:
+                    depth_url = upload_image(depth_filepath, depth_filename)
+                    item.depth_map_url = depth_url
+                    os.remove(depth_filepath)
+                    print(f"[Supabase] Uploaded and removed local {depth_filename}")
+                except Exception as e:
+                    print(f"[Supabase] Depth map upload failed, serving locally: {e}")
+                    item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
+            else:
+                item.depth_map_url = f"/static/{depth_filename}?v={int(time.time())}"
 
         item.image_filename = filename
         item.status = "generated"
@@ -126,6 +144,7 @@ def create_stereogram(payload: StereogramCreate, db: Session = Depends(get_db)):
         background_pattern=payload.background_pattern,
         hidden_object=payload.hidden_object,
         hidden_object_type=payload.hidden_object_type,
+        content_type=payload.content_type,
         theme=payload.theme,
         scheduled_date=payload.scheduled_date,
         depth_intensity=payload.depth_intensity,
@@ -161,6 +180,7 @@ async def import_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
                 background_pattern=row["background_pattern"].strip(),
                 hidden_object=row["hidden_object"].strip(),
                 hidden_object_type=row.get("hidden_object_type", "image").strip(),
+                content_type=(row.get("content_type") or "stereogram").strip(),
                 theme=row.get("theme", "General").strip(),
                 scheduled_date=date.fromisoformat(row["scheduled_date"].strip()),
                 depth_intensity=float(row.get("depth_intensity", 0.35)),

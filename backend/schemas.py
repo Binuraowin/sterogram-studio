@@ -7,6 +7,7 @@ class StereogramBase(BaseModel):
     background_pattern: str
     hidden_object: str
     hidden_object_type: str = "image"  # "text" or "image"
+    content_type: str = "stereogram"  # "stereogram" or "illusion"
     theme: str
     post_number: int
     scheduled_date: date
@@ -19,6 +20,7 @@ class StereogramCreate(BaseModel):
     background_pattern: str
     hidden_object: str
     hidden_object_type: str = "image"  # "text" or "image"
+    content_type: str = "stereogram"  # "stereogram" or "illusion"
     theme: str
     scheduled_date: date
     depth_intensity: float = 0.35
@@ -31,6 +33,7 @@ class StereogramUpdate(BaseModel):
     background_pattern: Optional[str] = None
     hidden_object: Optional[str] = None
     hidden_object_type: Optional[str] = None
+    content_type: Optional[str] = None
     theme: Optional[str] = None
     depth_intensity: Optional[float] = None
     color_mode: Optional[str] = None

@@ -20,5 +20,6 @@ class Stereogram(Base):
     color_mode = Column(String, default="random")
     dot_density = Column(Integer, default=5)
     hidden_object_type = Column(String, default="image")  # "text" or "image"
+    content_type = Column(String, default="stereogram", server_default="stereogram")  # "stereogram" or "illusion"
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
