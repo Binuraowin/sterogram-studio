@@ -14,11 +14,13 @@ from database import engine, SessionLocal, Base
 from models import Stereogram
 from routers.stereograms import router as stereograms_router
 from routers.posts import router as posts_router
+from routers.generate import router as generate_router
 
 GENERATED_IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
+GENERATED_VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_videos")
 
 SEED_DATA = [
-    {"background_pattern": "Jester Hat Pattern",      "hidden_object": "GOTCHA! text",     "post_number": 1, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
+    {"background_pattern": "Jester Hat Pattern",      "hidden_object": "GOTCHA text",       "post_number": 1, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
     {"background_pattern": "Confetti Explosion",       "hidden_object": "Mischievous imp",  "post_number": 2, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
     {"background_pattern": "Checkerboard Warp",        "hidden_object": "Question mark",    "post_number": 3, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
     {"background_pattern": "Swirling Hypnosis",        "hidden_object": "Smiling emoji",    "post_number": 4, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
@@ -58,6 +60,7 @@ def seed_database(db: Session):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
+    os.makedirs(GENERATED_VIDEOS_DIR, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -78,10 +81,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static/videos", StaticFiles(directory=GENERATED_VIDEOS_DIR), name="videos")
 app.mount("/static", StaticFiles(directory=GENERATED_IMAGES_DIR), name="static")
 
 app.include_router(stereograms_router, prefix="/api/stereograms")
 app.include_router(posts_router, prefix="/api/posts")
+app.include_router(generate_router)
 
 
 @app.get("/health")

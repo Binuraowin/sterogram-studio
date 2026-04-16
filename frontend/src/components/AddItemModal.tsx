@@ -11,9 +11,15 @@ interface AddItemModalProps {
 
 const COLOR_MODE_OPTIONS = ["random", "warm", "cool", "festive"];
 
+const IMPOSSIBLE_OBJECT_OPTIONS = [
+  { label: "Penrose Triangle", value: "penrose_triangle" },
+  { label: "Necker Cube", value: "necker_cube" },
+  { label: "Penrose Stairs", value: "penrose_stairs" },
+];
+
 export function AddItemModal({ onClose }: AddItemModalProps) {
   const queryClient = useQueryClient();
-  const [contentType, setContentType] = useState<"stereogram" | "illusion">("stereogram");
+  const [contentType, setContentType] = useState<"stereogram" | "illusion" | "impossible_object">("stereogram");
   const [form, setForm] = useState<CreateStereogramPayload>({
     background_pattern: "",
     hidden_object: "",
@@ -31,17 +37,18 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
   const set = (field: keyof CreateStereogramPayload, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleContentTypeToggle = (type: "stereogram" | "illusion") => {
+  const handleContentTypeToggle = (type: "stereogram" | "illusion" | "impossible_object") => {
     setContentType(type);
     setForm((prev) => ({
       ...prev,
       content_type: type,
-      background_pattern: "",
+      background_pattern: type === "impossible_object" ? "penrose_triangle" : "",
       hidden_object: "",
     }));
   };
 
   const isIllusion = contentType === "illusion";
+  const isImpossible = contentType === "impossible_object";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,9 +82,9 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
               <button
                 type="button"
                 onClick={() => handleContentTypeToggle("stereogram")}
-                className={`flex-1 px-3 py-2 transition-colors ${!isIllusion ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                className={`flex-1 px-3 py-2 transition-colors ${contentType === "stereogram" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
               >
-                Magic Eye Stereogram
+                Magic Eye
               </button>
               <button
                 type="button"
@@ -85,6 +92,13 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
                 className={`flex-1 px-3 py-2 transition-colors ${isIllusion ? "bg-violet-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
               >
                 Optical Illusion
+              </button>
+              <button
+                type="button"
+                onClick={() => handleContentTypeToggle("impossible_object")}
+                className={`flex-1 px-3 py-2 transition-colors ${isImpossible ? "bg-amber-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                Impossible Object
               </button>
             </div>
           </div>
@@ -113,7 +127,35 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
             </div>
           </div>
 
-          {isIllusion ? (
+          {isImpossible ? (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Object type *</label>
+                <select
+                  value={form.background_pattern}
+                  onChange={(e) => set("background_pattern", e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {IMPOSSIBLE_OBJECT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Color mode</label>
+                <select
+                  value={form.color_mode}
+                  onChange={(e) => set("color_mode", e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {COLOR_MODE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : isIllusion ? (
             <>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Scene description *</label>
@@ -276,7 +318,7 @@ export function AddItemModal({ onClose }: AddItemModalProps) {
             <button
               type="submit"
               disabled={saving}
-              className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-60 ${isIllusion ? "bg-violet-600 hover:bg-violet-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
+              className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-60 ${isImpossible ? "bg-amber-500 hover:bg-amber-600" : isIllusion ? "bg-violet-600 hover:bg-violet-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
             >
               {saving ? "Adding..." : "Add item"}
             </button>

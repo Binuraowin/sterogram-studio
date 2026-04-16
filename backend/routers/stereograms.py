@@ -53,6 +53,16 @@ def do_generate(stereogram_id: int, db_url: str):
             silhouette_pil.save(filepath, "PNG")
             depth_map_img = None
             print(f"[Illusion] silhouette saved for: {item.hidden_object}")
+        elif content_type == "impossible_object":
+            from services.impossible_objects import generate_impossible_object
+            img = generate_impossible_object(
+                item.background_pattern or "penrose_triangle",
+                width, height,
+                item.color_mode or "random"
+            )
+            img.save(filepath, "PNG")
+            depth_map_img = None
+            print(f"[Impossible] Generated {item.background_pattern} for: {item.theme}")
         else:
             params = {
                 "hidden_object": item.hidden_object,
