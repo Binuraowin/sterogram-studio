@@ -44,9 +44,10 @@ export function ImagePreview({ stereogram }: ImagePreviewProps) {
     return null;
   }
 
+  const cacheBuster = stereogram.updated_at ? `?t=${encodeURIComponent(stereogram.updated_at)}` : "";
   const imageFullUrl = stereogram.image_url?.startsWith("http")
-    ? stereogram.image_url
-    : `${BASE}${stereogram.image_url}`;
+    ? `${stereogram.image_url}${cacheBuster}`
+    : `${BASE}${stereogram.image_url}${cacheBuster}`;
   const downloadUrl = api.downloadUrl(stereogram.id);
 
   const handleGenerateCaption = async () => {

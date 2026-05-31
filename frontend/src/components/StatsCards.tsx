@@ -1,32 +1,37 @@
 import React from "react";
-import { Stereogram } from "@/lib/types";
 
 interface StatsCardsProps {
-  stereograms: Stereogram[];
+  counts: {
+    total: number;
+    not_started: number;
+    generating: number;
+    generated: number;
+  };
+  activeFilter: string;
+  onFilter: (filter: string) => void;
 }
 
-export function StatsCards({ stereograms }: StatsCardsProps) {
-  const total = stereograms.length;
-  const notStarted = stereograms.filter((s) => s.status === "not_started").length;
-  const generated = stereograms.filter((s) => s.status === "generated").length;
-  const themes = Array.from(new Set(stereograms.map((s) => s.theme)));
-  const themeLabel = themes.length === 1 ? themes[0] : `${themes.length} themes`;
-
+export function StatsCards({ counts, activeFilter, onFilter }: StatsCardsProps) {
   const cards = [
-    { label: "Total", value: total, color: "bg-blue-50 text-blue-700 border-blue-200" },
-    { label: "Not Started", value: notStarted, color: "bg-gray-50 text-gray-700 border-gray-200" },
-    { label: "Generated", value: generated, color: "bg-green-50 text-green-700 border-green-200" },
-    { label: "Theme", value: themeLabel, color: "bg-purple-50 text-purple-700 border-purple-200" },
+    { key: "", label: "Total Items", value: counts.total, tone: "purple" },
+    { key: "not_started", label: "Not Started", value: counts.not_started, tone: "" },
+    { key: "generating", label: "Generating", value: counts.generating, tone: "amber" },
+    { key: "generated", label: "Generated", value: counts.generated, tone: "green" },
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-3 mb-4">
+    <>
       {cards.map((card) => (
-        <div key={card.label} className={`rounded-lg border p-3 ${card.color}`}>
-          <div className="text-xs font-medium opacity-70">{card.label}</div>
-          <div className="text-xl font-bold mt-0.5">{card.value}</div>
-        </div>
+        <button
+          key={card.key}
+          className={`stat ${card.tone} ${activeFilter === card.key ? "active-filter" : ""}`}
+          onClick={() => onFilter(card.key)}
+          style={{ textAlign: "left", font: "inherit", color: "inherit", border: "1px solid" }}
+        >
+          <div className="val">{card.value}</div>
+          <div className="lbl">{card.label}</div>
+        </button>
       ))}
-    </div>
+    </>
   );
 }

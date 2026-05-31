@@ -4,6 +4,7 @@ __pycache__/
 *.pyd
 .Python
 backend/generated_images/
+backend/generated_videos/
 generated_images/
 .env
 .env.local
