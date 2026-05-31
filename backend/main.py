@@ -14,8 +14,12 @@ from database import engine, SessionLocal, Base
 from models import Stereogram
 from routers.stereograms import router as stereograms_router
 from routers.posts import router as posts_router
+from routers.rescue_reel import router as rescue_reel_router
 
 GENERATED_IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
+GENERATED_VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_videos")
+os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
+os.makedirs(GENERATED_VIDEOS_DIR, exist_ok=True)
 
 SEED_DATA = [
     {"background_pattern": "Jester Hat Pattern",      "hidden_object": "GOTCHA! text",     "post_number": 1, "scheduled_date": date(2026, 4, 1), "theme": "April Fools"},
@@ -36,6 +40,7 @@ def run_migrations(db: Session):
     migrations = [
         "ALTER TABLE stereograms ADD COLUMN hidden_object_type VARCHAR DEFAULT 'image'",
         "ALTER TABLE stereograms ADD COLUMN depth_map_url VARCHAR",
+        "ALTER TABLE stereograms ADD COLUMN captions TEXT",
     ]
     for sql in migrations:
         try:
@@ -57,6 +62,7 @@ def seed_database(db: Session):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
+    os.makedirs(GENERATED_VIDEOS_DIR, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -78,9 +84,11 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=GENERATED_IMAGES_DIR), name="static")
+app.mount("/videos", StaticFiles(directory=GENERATED_VIDEOS_DIR), name="videos")
 
 app.include_router(stereograms_router, prefix="/api/stereograms")
 app.include_router(posts_router, prefix="/api/posts")
+app.include_router(rescue_reel_router, prefix="/api/rescue-reel")
 
 
 @app.get("/health")

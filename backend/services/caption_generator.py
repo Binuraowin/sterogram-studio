@@ -1,73 +1,64 @@
-import os
 import json
+import os
 
 
-SYSTEM_PROMPT = "You are a Senior Social Media Strategist specializing in viral visual puzzles. You write Facebook captions for Magic Eye 3D stereogram posts. Always respond with valid JSON only — no extra text, no markdown."
+def generate_captions(subject: str, palette: str = "", content_type: str = "stereogram") -> dict:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY not configured")
 
-USER_TEMPLATE = """Generate 3 Facebook caption variations for a Magic Eye stereogram where the hidden object is "{hidden_object}" and the background pattern is "{background_pattern}".
+    import anthropic
+    client = anthropic.Anthropic(api_key=api_key)
 
-Each caption must include:
-1. Hook: Bold competitive statement
-2. Instruction: How to see it as an insider secret
-3. Micro-Challenge: Specific goal naming the hidden object
-4. Social Trigger: Force a comment or share
-5. Hashtags: 5-7 from #MagicEye #Stereogram #3DIllusion #BrainTeaser #VisualPuzzle #HiddenImage #OpticalIllusion
+    is_illusion = content_type == "illusion"
+    type_name = "optical illusion" if is_illusion else "Magic Eye stereogram"
+    view_hint = (
+        "look at the image — your brain automatically perceives a hidden shape embedded within the visual pattern"
+        if is_illusion else
+        "relax your eyes, stare through the screen, and the hidden 3D shape slowly pops out"
+    )
+    hashtags = (
+        "#OpticalIllusion #IllusionArt #BrainTeaser #MindBending #VisualIllusion #HiddenImage #Perception"
+        if is_illusion else
+        "#MagicEye #Stereogram #3DIllusion #OpticalIllusion #BrainTeaser #VisualPuzzle #HiddenImage"
+    )
 
-Tone: Mysterious, challenging, community-focused.
+    prompt = f"""You are a social media expert creating Facebook post captions for a {type_name} image.
 
-Return ONLY this JSON:
+The hidden subject is: {subject}
+How to view it: {view_hint}
+Hashtags to use: {hashtags}
+
+Return exactly this JSON (no markdown, no extra text):
 {{
-  "variation_a": {{"label": "High-Competition — Only 1% can", "caption": "..."}},
-  "variation_b": {{"label": "Nostalgic — 90s kids remember", "caption": "..."}},
-  "variation_c": {{"label": "Short & Punchy — Don't Blink", "caption": "..."}}
-}}"""
+  "variation_a": {{"label": "Challenge / FOMO", "caption": "..."}},
+  "variation_b": {{"label": "Educational / Story", "caption": "..."}},
+  "variation_c": {{"label": "Short & Punchy", "caption": "..."}}
+}}
 
+Rules per variation:
+- variation_a: Challenge angle — "only X% can see this", strong FOMO, CTA to comment YES/NO, include all hashtags
+- variation_b: Educational or nostalgic — explain the science of how the brain perceives hidden patterns, or invoke nostalgia; include all hashtags
+- variation_c: Ultra-short — 3 lines max, punchy hook, minimal hashtags (3-4 only)
+- 2-4 emojis per caption used naturally, not clustered at the end
+- End each caption with a clear CTA (comment, tag someone, share, react)
+- Captions must feel human and authentic, not like ad copy
+- {"Focus on how the brain finds hidden patterns, perception tricks, mind-bending visual science" if is_illusion else "Focus on the 3D depth illusion, relaxed-eye technique, childhood Magic Eye nostalgia"}"""
 
-def generate_captions(hidden_object: str, background_pattern: str) -> dict:
-    hf_token = os.environ.get("HF_TOKEN", "")
-    if not hf_token:
-        raise ValueError("HF_TOKEN is not configured.")
-
-    from huggingface_hub import InferenceClient
-
-    client = InferenceClient(
-        model="Qwen/Qwen2.5-7B-Instruct",
-        token=hf_token,
-    )
-
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": USER_TEMPLATE.format(
-            hidden_object=hidden_object,
-            background_pattern=background_pattern,
-        )},
-    ]
-
-    response = client.chat_completion(
-        messages=messages,
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
         max_tokens=1200,
-        temperature=0.7,
+        messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = response.choices[0].message.content.strip()
+    text = message.content[0].text.strip()
 
-    # Strip markdown fences if present
-    if "```" in raw:
-        parts = raw.split("```")
-        for part in parts:
-            part = part.strip()
-            if part.startswith("json"):
-                part = part[4:].strip()
-            if part.startswith("{"):
-                raw = part
-                break
+    # Strip markdown code fences if present
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:])
+        if "```" in text:
+            text = text[: text.rfind("```")]
+        text = text.strip()
 
-    # Extract JSON object from the response
-    start = raw.find("{")
-    end = raw.rfind("}") + 1
-    if start == -1 or end == 0:
-        raise ValueError(f"No JSON found in model response: {raw[:300]}")
-    raw = raw[start:end]
-
-    data = json.loads(raw)
-    return data
+    return json.loads(text)

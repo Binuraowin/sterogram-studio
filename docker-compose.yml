@@ -6,16 +6,21 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/generated_images:/app/generated_images
+      - ./backend/generated_videos:/app/generated_videos
     environment:
       - DATABASE_URL=sqlite:///./stereogram_studio.db
       - HF_TOKEN=${HF_TOKEN}
       - HF_MODEL=${HF_MODEL:-black-forest-labs/FLUX.1-schnell}
+      - HF_TEXT_MODEL=${HF_TEXT_MODEL:-mistralai/Mistral-7B-Instruct-v0.3}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_BUCKET=${SUPABASE_BUCKET:-stereograms}
       - WP_URL=${WP_URL}
       - WP_USER=${WP_USER}
       - WP_APP_PASSWORD=${WP_APP_PASSWORD}
+      - KIE_API_KEY=${KIE_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
